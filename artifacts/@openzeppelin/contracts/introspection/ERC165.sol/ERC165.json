@@ -4,6 +4,11 @@
   "sourceName": "@openzeppelin/contracts/introspection/ERC165.sol",
   "abi": [
     {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes4",

@@ -4,6 +4,11 @@
   "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
   "abi": [
     {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
       "anonymous": false,
       "inputs": [
         {
