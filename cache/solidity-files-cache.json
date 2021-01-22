@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/LsLMSR.sol": {
-      "lastModificationDate": 1611248569405,
-      "contentHash": "984d96bb7354c806a7e71c105f506a4a",
+      "lastModificationDate": 1611337400687,
+      "contentHash": "e488ee3f0645f599b4b655b7dd14c377",
       "sourceName": "contracts/LsLMSR.sol",
       "solcConfig": {
         "version": "0.6.2",

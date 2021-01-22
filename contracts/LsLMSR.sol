@@ -1,5 +1,9 @@
 pragma solidity ^0.6.0;
 
+/// @title An implementation for liquidity-sensitive LMSR market maker in Solidity
+/// @author Abdulla Al-Kamil
+/// @dev Feel free to make any adjustments to the code
+
 import "hardhat/console.sol";
 import "./ConditionalTokens.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
@@ -8,22 +12,45 @@ import {ABDKMath} from "./ABDKMath64x64.sol";
 
 contract LsLMSR is IERC1155Receiver, Ownable{
 
+  /**
+   * Please note: the contract utilitises the ABDKMath library to allow for
+   * mathematical functions such as logarithms and exponents. As such, all the
+   * state variables are stored as int128(signed 64.64 bit fixed point number).
+   * For all the functions below, there will be a helper function that Will
+   * return the same output as a uint256 (with the conventional output where
+   * one is equal to 10**18)
+   */
+
   uint public numOutcomes;
   int128[] private q;
   int128 private b;
   int128 private alpha;
   int128 private current_cost;
-  int128 private total_balance;
+  int128 private total_shares;
 
   ConditionalTokens private CT;
 
-  constructor(address _ct, address _oracle, uint _numOutcomes, uint _subsidy) public {
+  /**
+   * @notice Constructor function for the market maker
+   * @param _ct The address for the deployed conditional tokens contract
+   * @param _oracle The address for the EOA/contract which will act as the
+      oracle for this condition
+   * @param _numOutcomes The number of different outcomes available
+   * _subsidyToken Which ERC-20 token will be used to purchase and redeem
+      outcome tokens for this condition
+   * @param _subsidy How much initial funding is used to seed the market maker.
+   */
+  constructor(
+    address _ct,
+    address _oracle,
+    uint _numOutcomes,
+    uint _subsidy
+  ) public {
     CT = ConditionalTokens(_ct);
     CT.prepareCondition(_oracle, bytes32(uint256(1)), _numOutcomes);
     console.log("Condition Preparation: ", _oracle, '0x00000000000000000000000000000001', _numOutcomes);
 
     numOutcomes = _numOutcomes;
-
     int128 n = ABDKMath.fromUInt(_numOutcomes);
     int128 initial_subsidy = ABDKMath.divu(_subsidy, 10**18);
     int128 sum_total;
@@ -36,25 +63,35 @@ contract LsLMSR is IERC1155Receiver, Ownable{
       sum_total = ABDKMath.add(sum_total, eqb);
     }
 
-    total_balance = ABDKMath.mul(initial_subsidy, n);
+    total_shares = ABDKMath.mul(initial_subsidy, n);
     current_cost = cost();
     console.log("Initialisation parameters:");
     console.log("Alpha: %s.", ABDKMath.mulu(alpha, 1000000));
     console.log("Beta: %s", ABDKMath.toUInt(b));
-    console.log("Total balance: ", ABDKMath.toUInt(total_balance));
+    console.log("Total balance: ", ABDKMath.toUInt(total_shares));
   }
 
-  function buy(uint256 _outcome, int128 _amount) public returns (int128 cost_invariant){
+  /**
+   * @notice This function is used to buy outcome tokens.
+   * @param _outcome The outcome(s) which a user is buying tokens for.
+      Note: This is the integer representation for the bit array.
+   * @param _amount This is the number of outcome tokens purchased
+   * @return _price The cost to purchase _amount number of tokens
+   */
+  function buy(
+    uint256 _outcome,
+    int128 _amount
+  ) public returns (int128 _price){
     int128 sum_total;
 
     for(uint j=0; j<numOutcomes; j++) {
       if((_outcome & (1<<j)) != 0) {
         q[j] = ABDKMath.add(q[j], _amount);
-        total_balance = ABDKMath.add(total_balance, _amount);
+        total_shares = ABDKMath.add(total_shares, _amount);
       }
     }
 
-    b = ABDKMath.mul(total_balance, alpha);
+    b = ABDKMath.mul(total_shares, alpha);
 
     for(uint i=0; i< numOutcomes; i++) {
       sum_total = ABDKMath.add(sum_total,
@@ -64,17 +101,17 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     }
 
     int128 new_cost = ABDKMath.mul(b,ABDKMath.ln(sum_total));
-
-    cost_invariant = ABDKMath.sub(new_cost,current_cost);
-
+    _price = ABDKMath.sub(new_cost,current_cost);
     current_cost = new_cost;
-
   }
 
-  function buyU(uint256 _outcome, int128 _amount) public returns (uint256){
-    return ABDKMath.toUInt(buy(_outcome, _amount));
-  }
-
+  /**
+   * @notice View function returning the cost function.
+   *  This function returns the cost for this inventory state. It will be able
+      to tell you the total amount of collateral spent within the market maker.
+      For example, if a pool was seeded with 100 DAI and then a further 20 DAI
+      has been spent, this function will return 120 DAI.
+   */
   function cost() public view returns (int128) {
     int128 sum_total;
     for(uint i=0; i< numOutcomes; i++) {
@@ -83,12 +120,17 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     return ABDKMath.mul(b, ABDKMath.ln(sum_total));
   }
 
-  function cost_after_buy(uint256 _outcome, int128 _amount) public view returns (int128) {
+  /**
+   *  This function will tell you the cost (similar to above) after a proposed
+      transaction.
+   */
+  function cost_after_buy(
+    uint256 _outcome,
+    int128 _amount
+  ) public view returns (int128) {
     int128 sum_total;
     int128[] memory newq = new int128[](q.length);
-    int128 TB = total_balance;
-
-    //console.log("Checking cost for purchasing %s shares on outcome %s", ABDKMath.toUInt(_amount), _outcome);
+    int128 TB = total_shares;
 
     for(uint j=0; j< numOutcomes; j++) {
       if((_outcome & (1<<j)) != 0) {
@@ -111,20 +153,29 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     return ABDKMath.mul(_b, ABDKMath.ln(sum_total));
   }
 
-  function cost_after_buyU(uint256 _outcome, int128 _amount) public view returns (int128) {
-    return ABDKMath.toUInt(cost_after_buy(_outcome, _amount));
-  }
-
-  function costU() public view returns (uint128) {
-    return ABDKMath.toUInt(cost());
-  }
-
+  /**
+   *  This function tells you how much it will cost to make a particular trade.
+      It does this by calculating the difference between the current cost and
+      the cost after the transaction.
+   */
   function price(uint256 _outcome, int128 _amount) public view returns (int128) {
     return cost_after_buy(_outcome, _amount) - current_cost;
   }
 
-  function priceU(uint256 _outcome, int128 _amount) public view returns (uint256) {
-    return ABDKMath.toUInt(price(_outcome, _amount));
+  function cost_after_buyU(uint256 _outcome, uint256 _amount) public view returns (int128) {
+    return ABDKMath.toUInt(cost_after_buy(_outcome, ABDKMath.divu(_amount,10**18)));
+  }
+
+  function costU() public view returns (uint256) {
+    return ABDKMath.toUInt(cost());
+  }
+
+  function priceU(uint256 _outcome, uint256 _amount) public view returns (uint256) {
+    return ABDKMath.toUInt(price(_outcome, ABDKMath.divu(_amount,10**18)));
+  }
+
+  function buyU(uint256 _outcome, uint256 _amount) public returns (uint256){
+    return ABDKMath.mulu(buy(_outcome, ABDKMath.divu(_amount,10**18)), 10**18);
   }
 
   function onERC1155Received(
