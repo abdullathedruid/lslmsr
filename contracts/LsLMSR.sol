@@ -64,8 +64,6 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     require(init == false,'Already init');
     require(_overround > 0,'Cannot have 0 overround');
     CT.prepareCondition(_oracle, bytes32(uint256(address(this))), _numOutcomes);
-    console.log("Condition Preparation: ", _oracle, _numOutcomes);
-    console.logBytes32(bytes32(uint256(address(this))));
 
     IERC20(token).transferFrom(msg.sender, address(this), _subsidy);
 
@@ -74,11 +72,10 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     int128 initial_subsidy = ABDKMath.divu(_subsidy, 10**18);
     int128 sum_total;
 
-    int128 overround = ABDKMath.divu(_overround, 1000);
-
+    int128 overround = ABDKMath.divu(_overround, 1000); //TODO: if the overround is too low, then the exp overflows
     alpha = ABDKMath.div(overround, ABDKMath.mul(n,ABDKMath.ln(n)));
-
     b = ABDKMath.mul(ABDKMath.mul(initial_subsidy, n), alpha);
+
     int128 eqb = ABDKMath.exp(ABDKMath.div(initial_subsidy, b));
 
     for(uint i=0; i<_numOutcomes; i++) {
@@ -90,10 +87,12 @@ contract LsLMSR is IERC1155Receiver, Ownable{
 
     total_shares = ABDKMath.mul(initial_subsidy, n);
     current_cost = cost();
-    console.log("Initialisation parameters:");
+    /*console.log("Initialisation parameters:");
     console.log("Alpha: %s.", ABDKMath.mulu(alpha, 1000000));
     console.log("Beta: %s", ABDKMath.toUInt(b));
     console.log("Total balance: ", ABDKMath.toUInt(total_shares));
+    console.log("Condition Preparation: ", _oracle, _numOutcomes);
+    console.logBytes32(bytes32(uint256(address(this))));*/
   }
 
   /**

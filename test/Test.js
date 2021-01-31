@@ -42,8 +42,7 @@ describe("LS-LMSR", function() {
     })
 
     it("LS-LMSR setup", async function() {
-      console.log("test", fromUInt(20).div(1000).toString())
-      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 10)
+      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 100)
 
       expect(await dai.balanceOf(lslmsr.address)).to.equal(ethers.utils.parseEther('1000'))
       expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('0'))
@@ -56,7 +55,7 @@ describe("LS-LMSR", function() {
   describe("Cost functions", function() {
 
     it("Checking initial cost function", async function() {
-      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1100) //100 subsidy with 10% overround
+      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1099) //100 subsidy with 10% overround
     })
 
     it("Checking cost increases with purchase", async function() {
