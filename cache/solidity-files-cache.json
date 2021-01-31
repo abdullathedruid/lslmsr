@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/LsLMSR.sol": {
-      "lastModificationDate": 1611337400687,
-      "contentHash": "e488ee3f0645f599b4b655b7dd14c377",
+      "lastModificationDate": 1612134872171,
+      "contentHash": "44c255d20042195228332abf1b2522c6",
       "sourceName": "contracts/LsLMSR.sol",
       "solcConfig": {
         "version": "0.6.2",
@@ -32,7 +32,9 @@
         "./ConditionalTokens.sol",
         "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol",
         "@openzeppelin/contracts/access/Ownable.sol",
-        "./ABDKMath64x64.sol"
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "./ABDKMath64x64.sol",
+        "./FakeDai.sol"
       ],
       "versionPragmas": [
         "^0.6.0"
@@ -573,6 +575,80 @@
       ],
       "artifacts": [
         "console"
+      ]
+    },
+    "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/FakeDai.sol": {
+      "lastModificationDate": 1612108905127,
+      "contentHash": "6e93f5538f2471244cf6ce54dbf9b2db",
+      "sourceName": "contracts/FakeDai.sol",
+      "solcConfig": {
+        "version": "0.6.2",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.6.0"
+      ],
+      "artifacts": [
+        "FakeDai"
+      ]
+    },
+    "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+      "lastModificationDate": 1611241447242,
+      "contentHash": "1d93743f6ca9d2ecf9b3c26718faf610",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "solcConfig": {
+        "version": "0.6.2",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../GSN/Context.sol",
+        "./IERC20.sol",
+        "../../math/SafeMath.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
       ]
     }
   }

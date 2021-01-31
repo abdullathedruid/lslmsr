@@ -8,7 +8,9 @@ import "hardhat/console.sol";
 import "./ConditionalTokens.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ABDKMath} from "./ABDKMath64x64.sol";
+import "./FakeDai.sol";
 
 contract LsLMSR is IERC1155Receiver, Ownable{
 
@@ -16,9 +18,6 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    * Please note: the contract utilitises the ABDKMath library to allow for
    * mathematical functions such as logarithms and exponents. As such, all the
    * state variables are stored as int128(signed 64.64 bit fixed point number).
-   * For all the functions below, there will be a helper function that Will
-   * return the same output as a uint256 (with the conventional output where
-   * one is equal to 10**18)
    */
 
   uint public numOutcomes;
@@ -29,10 +28,26 @@ contract LsLMSR is IERC1155Receiver, Ownable{
   int128 private total_shares;
 
   ConditionalTokens private CT;
+  address public token;
+
+  bool private init;
 
   /**
    * @notice Constructor function for the market maker
    * @param _ct The address for the deployed conditional tokens contract
+   * @param _token Which ERC-20 token will be used to purchase and redeem
+      outcome tokens for this condition
+   */
+  constructor(
+    address _ct,
+    address _token
+  ) public {
+    CT = ConditionalTokens(_ct);
+    token = _token;
+  }
+
+  /**
+   * @notice Set up some of the variables for the market maker
    * @param _oracle The address for the EOA/contract which will act as the
       oracle for this condition
    * @param _numOutcomes The number of different outcomes available
@@ -40,21 +55,29 @@ contract LsLMSR is IERC1155Receiver, Ownable{
       outcome tokens for this condition
    * @param _subsidy How much initial funding is used to seed the market maker.
    */
-  constructor(
-    address _ct,
+  function setup(
     address _oracle,
     uint _numOutcomes,
-    uint _subsidy
-  ) public {
-    CT = ConditionalTokens(_ct);
-    CT.prepareCondition(_oracle, bytes32(uint256(1)), _numOutcomes);
-    console.log("Condition Preparation: ", _oracle, '0x00000000000000000000000000000001', _numOutcomes);
+    uint _subsidy,
+    uint _overround
+  ) public onlyOwner() {
+    require(init == false,'Already init');
+    require(_overround > 0,'Cannot have 0 overround');
+    CT.prepareCondition(_oracle, bytes32(uint256(address(this))), _numOutcomes);
+    console.log("Condition Preparation: ", _oracle, _numOutcomes);
+    console.logBytes32(bytes32(uint256(address(this))));
+
+    IERC20(token).transferFrom(msg.sender, address(this), _subsidy);
 
     numOutcomes = _numOutcomes;
     int128 n = ABDKMath.fromUInt(_numOutcomes);
     int128 initial_subsidy = ABDKMath.divu(_subsidy, 10**18);
     int128 sum_total;
-    alpha = ABDKMath.div(1,ABDKMath.mul(10,ABDKMath.mul(n,ABDKMath.ln(n))));
+
+    int128 overround = ABDKMath.divu(_overround, 1000);
+
+    alpha = ABDKMath.div(overround, ABDKMath.mul(n,ABDKMath.ln(n)));
+
     b = ABDKMath.mul(ABDKMath.mul(initial_subsidy, n), alpha);
     int128 eqb = ABDKMath.exp(ABDKMath.div(initial_subsidy, b));
 
@@ -62,6 +85,8 @@ contract LsLMSR is IERC1155Receiver, Ownable{
       q.push(initial_subsidy);
       sum_total = ABDKMath.add(sum_total, eqb);
     }
+
+    init = true;
 
     total_shares = ABDKMath.mul(initial_subsidy, n);
     current_cost = cost();
@@ -81,8 +106,10 @@ contract LsLMSR is IERC1155Receiver, Ownable{
   function buy(
     uint256 _outcome,
     int128 _amount
-  ) public returns (int128 _price){
+  ) public onlyAfterInit() returns (int128 _price){
     int128 sum_total;
+
+    //TODO: add a check to make sure market still open
 
     for(uint j=0; j<numOutcomes; j++) {
       if((_outcome & (1<<j)) != 0) {
@@ -112,7 +139,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
       For example, if a pool was seeded with 100 DAI and then a further 20 DAI
       has been spent, this function will return 120 DAI.
    */
-  function cost() public view returns (int128) {
+  function cost() public view onlyAfterInit() returns (int128) {
     int128 sum_total;
     for(uint i=0; i< numOutcomes; i++) {
       sum_total = ABDKMath.add(sum_total, ABDKMath.exp(ABDKMath.div(q[i], b)));
@@ -162,22 +189,6 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     return cost_after_buy(_outcome, _amount) - current_cost;
   }
 
-  function cost_after_buyU(uint256 _outcome, uint256 _amount) public view returns (int128) {
-    return ABDKMath.toUInt(cost_after_buy(_outcome, ABDKMath.divu(_amount,10**18)));
-  }
-
-  function costU() public view returns (uint256) {
-    return ABDKMath.toUInt(cost());
-  }
-
-  function priceU(uint256 _outcome, uint256 _amount) public view returns (uint256) {
-    return ABDKMath.toUInt(price(_outcome, ABDKMath.divu(_amount,10**18)));
-  }
-
-  function buyU(uint256 _outcome, uint256 _amount) public returns (uint256){
-    return ABDKMath.mulu(buy(_outcome, ABDKMath.divu(_amount,10**18)), 10**18);
-  }
-
   function onERC1155Received(
     address operator,
     address from,
@@ -201,5 +212,10 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    function supportsInterface(
      bytes4 interfaceId
   ) external override view returns (bool) {}
+
+    modifier onlyAfterInit {
+      require(init == true);
+      _;
+    }
 
 }
