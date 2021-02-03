@@ -70,17 +70,13 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     numOutcomes = _numOutcomes;
     int128 n = ABDKMath.fromUInt(_numOutcomes);
     int128 initial_subsidy = ABDKMath.divu(_subsidy, 10**18);
-    int128 sum_total;
 
     int128 overround = ABDKMath.divu(_overround, 1000); //TODO: if the overround is too low, then the exp overflows
     alpha = ABDKMath.div(overround, ABDKMath.mul(n,ABDKMath.ln(n)));
     b = ABDKMath.mul(ABDKMath.mul(initial_subsidy, n), alpha);
 
-    int128 eqb = ABDKMath.exp(ABDKMath.div(initial_subsidy, b));
-
     for(uint i=0; i<_numOutcomes; i++) {
       q.push(initial_subsidy);
-      sum_total = ABDKMath.add(sum_total, eqb);
     }
 
     init = true;
