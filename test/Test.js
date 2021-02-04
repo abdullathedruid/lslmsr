@@ -26,9 +26,9 @@ describe("LS-LMSR", function() {
       dai = await DAI.deploy();
     })
 
-    it("Creating 1000 DAI for user", async function() {
-      await dai.mint(owner.address, ethers.utils.parseEther('1000'))
-      expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000'))
+    it("Creating 2000 DAI for user", async function() {
+      await dai.mint(owner.address, ethers.utils.parseEther('2000'))
+      expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('2000'))
     })
 
     it("LS-LMSR contract deployed", async function() {
@@ -37,15 +37,15 @@ describe("LS-LMSR", function() {
     })
 
     it("Approve LS-LMSR to spend user money", async function() {
-      await dai.approve(lslmsr.address, ethers.utils.parseEther('1000'))
-      expect(await dai.allowance(owner.address, lslmsr.address)).to.equal(ethers.utils.parseEther('1000'))
+      await dai.approve(lslmsr.address, ethers.utils.parseEther('1500'))
+      expect(await dai.allowance(owner.address, lslmsr.address)).to.equal(ethers.utils.parseEther('1500'))
     })
 
     it("LS-LMSR setup", async function() {
-      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 10)
+      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 100)
 
       expect(await dai.balanceOf(lslmsr.address)).to.equal(ethers.utils.parseEther('1000'))
-      expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('0'))
+      expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000'))
     })
 
   })
@@ -55,7 +55,7 @@ describe("LS-LMSR", function() {
   describe("Cost functions", function() {
 
     it("Checking initial cost function", async function() {
-      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1009) //100 subsidy with 10% overround
+      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1100-1) //100 subsidy with 10% overround
     })
 
     it("Checking cost increases with purchase", async function() {
@@ -70,11 +70,21 @@ describe("LS-LMSR", function() {
   describe("Testing buy/sell", function() {
     it("Trying to buy", async function() {
       //var cost_before = (await lslmsr.costU()).toNumber()
-      //await lslmsr.buyU(1, ethers.utils.parseEther('10'))
+      await lslmsr.buy(1, fromUInt(10))
       //var cost_after = (await lslmsr.costU()).toNumber()
       //expect(cost_before).to.lt(cost_after)
+      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)))
+      console.log(ethers.utils.formatUnits(await dai.balanceOf(owner.address)))
 
     })
+    it("Debugging disjoint array", async function() {
+      var output = await lslmsr.getPositionAndDustPositions(7);
+      output.map(function (out) {
+        console.log(out.toString())
+      })
+    })
   })
+
+
 
 })

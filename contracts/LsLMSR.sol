@@ -9,6 +9,8 @@ import "./ConditionalTokens.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {ABDKMath} from "./ABDKMath64x64.sol";
 import "./FakeDai.sol";
 
@@ -20,6 +22,8 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    * state variables are stored as int128(signed 64.64 bit fixed point number).
    */
 
+  using SafeERC20 for IERC20;
+
   uint public numOutcomes;
   int128[] private q;
   int128 private b;
@@ -27,6 +31,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
   int128 private current_cost;
   int128 private total_shares;
 
+  bytes32 private condition;
   ConditionalTokens private CT;
   address public token;
 
@@ -64,12 +69,13 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     require(init == false,'Already init');
     require(_overround > 0,'Cannot have 0 overround');
     CT.prepareCondition(_oracle, bytes32(uint256(address(this))), _numOutcomes);
+    condition = CT.getConditionId(_oracle, bytes32(uint256(address(this))), _numOutcomes);
 
-    IERC20(token).transferFrom(msg.sender, address(this), _subsidy);
+    IERC20(token).safeTransferFrom(msg.sender, address(this), _subsidy);
 
     numOutcomes = _numOutcomes;
     int128 n = ABDKMath.fromUInt(_numOutcomes);
-    int128 initial_subsidy = ABDKMath.divu(_subsidy, 10**18);
+    int128 initial_subsidy = getTokenEth(token, _subsidy);
 
     int128 overround = ABDKMath.divu(_overround, 1000); //TODO: if the overround is too low, then the exp overflows
     alpha = ABDKMath.div(overround, ABDKMath.mul(n,ABDKMath.ln(n)));
@@ -103,8 +109,8 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     int128 _amount
   ) public onlyAfterInit() returns (int128 _price){
     int128 sum_total;
-
-    //TODO: add a check to make sure market still open
+    require(_outcome > 0);
+    require(CT.payoutDenominator(condition) == 0, 'Market already resolved');
 
     for(uint j=0; j<numOutcomes; j++) {
       if((_outcome & (1<<j)) != 0) {
@@ -125,6 +131,39 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     int128 new_cost = ABDKMath.mul(b,ABDKMath.ln(sum_total));
     _price = ABDKMath.sub(new_cost,current_cost);
     current_cost = new_cost;
+
+    uint token_cost = getTokenWei(token, _price);
+    uint n_outcome_tokens = ABDKMath.toUInt(_amount);
+    require(IERC20(token).transferFrom(msg.sender, address(this), token_cost),
+      'Error transferring tokens');
+    IERC20(token).approve(address(CT), getTokenWei(token, _amount));
+    /* CT.splitPosition(IERC20(token), bytes32(0), condition,
+      getPositionAndDustPositions(_outcome), n_outcome_tokens); */
+    console.log(getTokenWei(token, _amount));
+  }
+
+  function getOnes(uint n) internal pure returns (uint count) {
+    while(n!=0) {
+      n = n&(n-1);
+      count++;
+    }
+  }
+
+  function getPositionAndDustPositions(
+    uint _outcome
+  ) public view returns (uint256[] memory){
+    uint index = (1<<numOutcomes)-1;
+    uint inv = _outcome^index;
+    uint[] memory partx = new uint256[](getOnes(inv)+1);
+    uint n = 1;
+    partx[0] = _outcome;
+    for(uint i=0; i<numOutcomes; i++) {
+      if((inv & 1<<i) != 0) {
+        partx[n] = 1<<i;
+        n++;
+      }
+    }
+    return partx;
   }
 
   /**
@@ -180,8 +219,27 @@ contract LsLMSR is IERC1155Receiver, Ownable{
       It does this by calculating the difference between the current cost and
       the cost after the transaction.
    */
-  function price(uint256 _outcome, int128 _amount) public view returns (int128) {
+  function price(
+    uint256 _outcome,
+    int128 _amount
+  ) public view returns (int128) {
     return cost_after_buy(_outcome, _amount) - current_cost;
+  }
+
+  function getTokenWei(
+    address _token,
+    int128 _amount
+  ) public view returns (uint) {
+    uint d = ERC20(_token).decimals();
+    return ABDKMath.mulu(_amount, 10 ** d);
+  }
+
+  function getTokenEth(
+    address _token,
+    uint _amount
+  ) public view returns (int128) {
+    uint d = ERC20(_token).decimals();
+    return ABDKMath.divu(_amount, 10 ** d);
   }
 
   function onERC1155Received(

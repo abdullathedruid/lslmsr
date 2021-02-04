@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/LsLMSR.sol": {
-      "lastModificationDate": 1612136965908,
-      "contentHash": "2e4daadd7bbad1da782ec1dc689325cc",
+      "lastModificationDate": 1612477397390,
+      "contentHash": "cc4c5a628785d4d28ba8fb542554a524",
       "sourceName": "contracts/LsLMSR.sol",
       "solcConfig": {
         "version": "0.6.2",
@@ -33,6 +33,8 @@
         "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol",
         "@openzeppelin/contracts/access/Ownable.sol",
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/SafeERC20.sol",
         "./ABDKMath64x64.sol",
         "./FakeDai.sol"
       ],
@@ -44,8 +46,8 @@
       ]
     },
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/ConditionalTokens.sol": {
-      "lastModificationDate": 1611241416400,
-      "contentHash": "5a915fc3d9934b1b18c634a5518cf932",
+      "lastModificationDate": 1612471280736,
+      "contentHash": "f30e64e8b5b948ddef7843294cb5162a",
       "sourceName": "contracts/ConditionalTokens.sol",
       "solcConfig": {
         "version": "0.6.2",
@@ -75,7 +77,7 @@
         "./CTHelpers.sol"
       ],
       "versionPragmas": [
-        "^0.6.0"
+        "^0.6.1"
       ],
       "artifacts": [
         "ConditionalTokens"
@@ -649,6 +651,44 @@
       ],
       "artifacts": [
         "ERC20"
+      ]
+    },
+    "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/node_modules/@openzeppelin/contracts/token/ERC20/SafeERC20.sol": {
+      "lastModificationDate": 1611241447243,
+      "contentHash": "33e22842646d746e5c4124c2fdc051aa",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/SafeERC20.sol",
+      "solcConfig": {
+        "version": "0.6.2",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "../../math/SafeMath.sol",
+        "../../utils/Address.sol"
+      ],
+      "versionPragmas": [
+        ">=0.6.0 <0.8.0"
+      ],
+      "artifacts": [
+        "SafeERC20"
       ]
     }
   }

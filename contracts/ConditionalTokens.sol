@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.1;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
@@ -221,7 +221,7 @@ contract ConditionalTokens is ERC1155 {
         emit PositionsMerge(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
     }
 
-    function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] memory indexSets) public {
+    function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
         uint den = payoutDenominator[conditionId];
         require(den > 0, "result for condition not received yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
@@ -260,20 +260,6 @@ contract ConditionalTokens is ERC1155 {
         emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, conditionId, indexSets, totalPayout);
     }
 
-    function redeemComboPositions(IERC20 collateralToken, bytes32[] calldata conditionIds, uint[] calldata outcomes) external {
-      require(conditionIds.length == outcomes.length,'redeemCombo: mismatch length');
-      bytes32[] memory collectionChain = new bytes32[](conditionIds.length+1);
-      collectionChain[0] = bytes32(0);
-      for (uint i=1; i< conditionIds.length; i++){
-        collectionChain[i] = getCollectionId(collectionChain[i-1],conditionIds[i-1],outcomes[i-1]);
-      }
-      uint[] memory temp_array = new uint[](1);
-      for (uint j=conditionIds.length; j>0; j--) {
-        temp_array[0] = outcomes[j-1];
-        redeemPositions(collateralToken,collectionChain[j-1],conditionIds[j-1],temp_array);
-      }
-    }
-
     /// @dev Gets the outcome slot count of a condition.
     /// @param conditionId ID of the condition.
     /// @return Number of outcome slots associated with a condition, or zero if condition has not been prepared yet.
@@ -293,7 +279,7 @@ contract ConditionalTokens is ERC1155 {
     /// @param parentCollectionId Collection ID of the parent outcome collection, or bytes32(0) if there's no parent.
     /// @param conditionId Condition ID of the outcome collection to combine with the parent outcome collection.
     /// @param indexSet Index set of the outcome collection to combine with the parent outcome collection.
-    function getCollectionId(bytes32 parentCollectionId, bytes32 conditionId, uint indexSet) public view returns (bytes32) {
+    function getCollectionId(bytes32 parentCollectionId, bytes32 conditionId, uint indexSet) external view returns (bytes32) {
         return CTHelpers.getCollectionId(parentCollectionId, conditionId, indexSet);
     }
 
