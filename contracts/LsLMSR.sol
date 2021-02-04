@@ -133,13 +133,16 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     current_cost = new_cost;
 
     uint token_cost = getTokenWei(token, _price);
-    uint n_outcome_tokens = ABDKMath.toUInt(_amount);
+    uint n_outcome_tokens = getTokenWei(token, _amount);
     require(IERC20(token).transferFrom(msg.sender, address(this), token_cost),
       'Error transferring tokens');
     IERC20(token).approve(address(CT), getTokenWei(token, _amount));
-    /* CT.splitPosition(IERC20(token), bytes32(0), condition,
-      getPositionAndDustPositions(_outcome), n_outcome_tokens); */
-    console.log(getTokenWei(token, _amount));
+    CT.splitPosition(IERC20(token), bytes32(0), condition,
+      getPositionAndDustPositions(_outcome), n_outcome_tokens);
+    uint pos = CT.getPositionId(IERC20(token),
+    CT.getCollectionId(bytes32(0), condition, _outcome));
+    CT.safeTransferFrom(address(this), msg.sender,
+      pos, n_outcome_tokens, '');
   }
 
   function getOnes(uint n) internal pure returns (uint count) {

@@ -69,19 +69,9 @@ describe("LS-LMSR", function() {
 
   describe("Testing buy/sell", function() {
     it("Trying to buy", async function() {
-      //var cost_before = (await lslmsr.costU()).toNumber()
-      await lslmsr.buy(1, fromUInt(10))
-      //var cost_after = (await lslmsr.costU()).toNumber()
-      //expect(cost_before).to.lt(cost_after)
-      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)))
-      console.log(ethers.utils.formatUnits(await dai.balanceOf(owner.address)))
-
-    })
-    it("Debugging disjoint array", async function() {
-      var output = await lslmsr.getPositionAndDustPositions(7);
-      output.map(function (out) {
-        console.log(out.toString())
-      })
+      await expect(lslmsr.buy(1, fromUInt(10))).to.emit(ct, 'PositionSplit')
+      expect(await ct.balanceOf(owner.address, ethers.BigNumber.from('112404126028730116228429802878362298843209268839169693949991857295994972429654')))
+        .to.equal(ethers.utils.parseEther('10'))
     })
   })
 
