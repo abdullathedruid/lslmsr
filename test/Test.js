@@ -42,7 +42,7 @@ describe("LS-LMSR", function() {
     })
 
     it("LS-LMSR setup", async function() {
-      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 100)
+      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 1000)
 
       expect(await dai.balanceOf(lslmsr.address)).to.equal(ethers.utils.parseEther('1000'))
       expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000'))
@@ -72,6 +72,21 @@ describe("LS-LMSR", function() {
       await expect(lslmsr.buy(1, fromUInt(10))).to.emit(ct, 'PositionSplit')
       expect(await ct.balanceOf(owner.address, ethers.BigNumber.from('112404126028730116228429802878362298843209268839169693949991857295994972429654')))
         .to.equal(ethers.utils.parseEther('10'))
+    })
+  })
+
+  describe("Testing functions when event is over", function() {
+    it("Reporting outcome for event", async function() {
+      await expect(ct.reportPayouts('0x000000000000000000000000cf7ed3acca5a467e9e704c703e8d87f634fb0fc9', [0,1,0]))
+        .to.emit(ct, 'ConditionResolution')
+    })
+    it("Checking to see if you can buy after resolution", async function() {
+      await expect(lslmsr.buy(1, fromUInt(10))).to.be.revertedWith('Market already resolved')
+    })
+    it("Seeing if you can withdraw initial liquidity", async function() {
+      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)));
+      await lslmsr.withdraw()
+      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)));
     })
   })
 

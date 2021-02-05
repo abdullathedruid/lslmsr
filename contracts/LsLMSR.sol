@@ -59,6 +59,8 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    * _subsidyToken Which ERC-20 token will be used to purchase and redeem
       outcome tokens for this condition
    * @param _subsidy How much initial funding is used to seed the market maker.
+   * @param _overround How much 'profit' does the AMM claim? Note that this is
+   * represented in bips. Therefore inputting 300 represents 0.30%
    */
   function setup(
     address _oracle,
@@ -70,6 +72,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     require(_overround > 0,'Cannot have 0 overround');
     CT.prepareCondition(_oracle, bytes32(uint256(address(this))), _numOutcomes);
     condition = CT.getConditionId(_oracle, bytes32(uint256(address(this))), _numOutcomes);
+    console.logBytes32(bytes32(uint256(address(this))));
 
     IERC20(token).safeTransferFrom(msg.sender, address(this), _subsidy);
 
@@ -77,7 +80,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     int128 n = ABDKMath.fromUInt(_numOutcomes);
     int128 initial_subsidy = getTokenEth(token, _subsidy);
 
-    int128 overround = ABDKMath.divu(_overround, 1000); //TODO: if the overround is too low, then the exp overflows
+    int128 overround = ABDKMath.divu(_overround, 10000); //TODO: if the overround is too low, then the exp overflows
     alpha = ABDKMath.div(overround, ABDKMath.mul(n,ABDKMath.ln(n)));
     b = ABDKMath.mul(ABDKMath.mul(initial_subsidy, n), alpha);
 
@@ -143,6 +146,21 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     CT.getCollectionId(bytes32(0), condition, _outcome));
     CT.safeTransferFrom(address(this), msg.sender,
       pos, n_outcome_tokens, '');
+  }
+
+  function withdraw() public onlyAfterInit() onlyOwner() {
+    require(CT.payoutDenominator(condition) != 0, 'Market needs to be resolved');
+    uint[] memory dust = new uint256[](numOutcomes);
+    uint p = 0;
+    for (uint i=0; i<numOutcomes; i++) {
+      dust[i] = 1<<i;
+      /* console.log('Index', 1<<i); */
+      p = CT.getPositionId(IERC20(token), CT.getCollectionId(
+        bytes32(0), condition, 1<<i)
+        );
+      /* console.log(CT.balanceOf(address(this), p)); */
+    }
+    CT.redeemPositions(IERC20(token), bytes32(0), condition, dust);
   }
 
   function getOnes(uint n) internal pure returns (uint count) {
