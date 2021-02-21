@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/LsLMSR.sol": {
-      "lastModificationDate": 1612558583559,
-      "contentHash": "395492f511c077556bdb50ac00197e46",
+      "lastModificationDate": 1613926950823,
+      "contentHash": "ed210d344e62dcdbe4d9175d0ea1af05",
       "sourceName": "contracts/LsLMSR.sol",
       "solcConfig": {
         "version": "0.6.2",
@@ -28,7 +28,6 @@
         }
       },
       "imports": [
-        "hardhat/console.sol",
         "./ConditionalTokens.sol",
         "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol",
         "@openzeppelin/contracts/access/Ownable.sol",
@@ -120,7 +119,7 @@
       ]
     },
     "/Users/abdullaalkamil/Coding/GNOSIS/lslmsr/contracts/ABDKMath64x64.sol": {
-      "lastModificationDate": 1611242846668,
+      "lastModificationDate": 1613424970384,
       "contentHash": "b8fef1027e0d2544c5a65f4f7e59d890",
       "sourceName": "contracts/ABDKMath64x64.sol",
       "solcConfig": {

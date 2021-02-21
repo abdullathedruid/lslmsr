@@ -42,7 +42,7 @@ describe("LS-LMSR", function() {
     })
 
     it("LS-LMSR setup", async function() {
-      await lslmsr.setup(owner.address, 3, ethers.utils.parseEther('1000'), 1000)
+      await lslmsr.setup(owner.address, '0x7465737400000000000000000000000000000000000000000000000000000000', 3, ethers.utils.parseEther('1000'), 501)
 
       expect(await dai.balanceOf(lslmsr.address)).to.equal(ethers.utils.parseEther('1000'))
       expect(await dai.balanceOf(owner.address)).to.equal(ethers.utils.parseEther('1000'))
@@ -50,46 +50,48 @@ describe("LS-LMSR", function() {
 
   })
 
-
-
   describe("Cost functions", function() {
 
     it("Checking initial cost function", async function() {
-      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1100-1) //100 subsidy with 10% overround
-    })
-
-    it("Checking cost increases with purchase", async function() {
-      //expect(ethers.BigNumber.from(await lslmsr.cost_after_buyU(1, ethers.utils.parseEther('10'))).toNumber()).to.gt(110) //100 subsidy with 10% overround
+      expect(toUInt(ethers.BigNumber.from(await lslmsr.cost()))).to.equal(1050) //1000 subsidy with 5% overround
     })
 
     it("Checking price at baseline", async function() {
-      //expect(ethers.BigNumber.from(await lslmsr.priceU(1, ethers.utils.parseEther('10'))).toNumber()).to.equal(4) //100 subsidy with 10% overround
+      expect(await lslmsr.price(1, '184467440737095516160')).to.equal('69151762028953803591')
     })
   })
 
   describe("Testing buy/sell", function() {
     it("Trying to buy", async function() {
-      await expect(lslmsr.buy(1, fromUInt(10))).to.emit(ct, 'PositionSplit')
-      expect(await ct.balanceOf(owner.address, ethers.BigNumber.from('112404126028730116228429802878362298843209268839169693949991857295994972429654')))
+      var cond = await lslmsr.condition()
+      var coll = await ct.getCollectionId('0x0000000000000000000000000000000000000000000000000000000000000000', cond,1)
+      var p = await ct.getPositionId(dai.address, coll)
+      await expect(lslmsr.buy(1, '184467440737095516160')).to.emit(ct, 'PositionSplit')
+      expect(await ct.balanceOf(owner.address, p))
         .to.equal(ethers.utils.parseEther('10'))
+    })
+
+    it("Testing re-mint", async function() {
+      var cond = await lslmsr.condition()
+      var coll = await ct.getCollectionId('0x0000000000000000000000000000000000000000000000000000000000000000', cond,2)
+      var p = await ct.getPositionId(dai.address, coll)
+      await lslmsr.buy(2, '18446744073709551616')
+      expect(await ct.balanceOf(lslmsr.address, p))
+        .to.equal('9000000000000000000')
     })
   })
 
   describe("Testing functions when event is over", function() {
     it("Reporting outcome for event", async function() {
-      await expect(ct.reportPayouts('0x000000000000000000000000cf7ed3acca5a467e9e704c703e8d87f634fb0fc9', [0,1,0]))
+      await expect(ct.reportPayouts('0x7465737400000000000000000000000000000000000000000000000000000000', [0,1,0]))
         .to.emit(ct, 'ConditionResolution')
     })
     it("Checking to see if you can buy after resolution", async function() {
       await expect(lslmsr.buy(1, fromUInt(10))).to.be.revertedWith('Market already resolved')
     })
     it("Seeing if you can withdraw initial liquidity", async function() {
-      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)));
       await lslmsr.withdraw()
-      console.log(ethers.utils.formatUnits(await dai.balanceOf(lslmsr.address)));
     })
   })
-
-
 
 })

@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 /// @author Abdulla Al-Kamil
 /// @dev Feel free to make any adjustments to the code
 
-import "hardhat/console.sol";
 import "./ConditionalTokens.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -31,7 +30,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
   int128 private current_cost;
   int128 private total_shares;
 
-  bytes32 private condition;
+  bytes32 public condition;
   ConditionalTokens private CT;
   address public token;
 
@@ -55,6 +54,7 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    * @notice Set up some of the variables for the market maker
    * @param _oracle The address for the EOA/contract which will act as the
       oracle for this condition
+   * @param _questionId The question ID (needs to be unique)
    * @param _numOutcomes The number of different outcomes available
    * _subsidyToken Which ERC-20 token will be used to purchase and redeem
       outcome tokens for this condition
@@ -64,15 +64,15 @@ contract LsLMSR is IERC1155Receiver, Ownable{
    */
   function setup(
     address _oracle,
+    bytes32 _questionId,
     uint _numOutcomes,
     uint _subsidy,
     uint _overround
   ) public onlyOwner() {
     require(init == false,'Already init');
     require(_overround > 0,'Cannot have 0 overround');
-    CT.prepareCondition(_oracle, bytes32(uint256(address(this))), _numOutcomes);
-    condition = CT.getConditionId(_oracle, bytes32(uint256(address(this))), _numOutcomes);
-    console.logBytes32(bytes32(uint256(address(this))));
+    CT.prepareCondition(_oracle, _questionId, _numOutcomes);
+    condition = CT.getConditionId(_oracle, _questionId, _numOutcomes);
 
     IERC20(token).safeTransferFrom(msg.sender, address(this), _subsidy);
 
@@ -92,12 +92,6 @@ contract LsLMSR is IERC1155Receiver, Ownable{
 
     total_shares = ABDKMath.mul(initial_subsidy, n);
     current_cost = cost();
-    /*console.log("Initialisation parameters:");
-    console.log("Alpha: %s.", ABDKMath.mulu(alpha, 1000000));
-    console.log("Beta: %s", ABDKMath.toUInt(b));
-    console.log("Total balance: ", ABDKMath.toUInt(total_shares));
-    console.log("Condition Preparation: ", _oracle, _numOutcomes);
-    console.logBytes32(bytes32(uint256(address(this))));*/
   }
 
   /**
@@ -137,13 +131,17 @@ contract LsLMSR is IERC1155Receiver, Ownable{
 
     uint token_cost = getTokenWei(token, _price);
     uint n_outcome_tokens = getTokenWei(token, _amount);
+    uint pos = CT.getPositionId(IERC20(token),
+      CT.getCollectionId(bytes32(0), condition, _outcome));
+
     require(IERC20(token).transferFrom(msg.sender, address(this), token_cost),
       'Error transferring tokens');
-    IERC20(token).approve(address(CT), getTokenWei(token, _amount));
-    CT.splitPosition(IERC20(token), bytes32(0), condition,
-      getPositionAndDustPositions(_outcome), n_outcome_tokens);
-    uint pos = CT.getPositionId(IERC20(token),
-    CT.getCollectionId(bytes32(0), condition, _outcome));
+
+    if(CT.balanceOf(address(this), pos) < n_outcome_tokens) {
+      IERC20(token).approve(address(CT), getTokenWei(token, _amount));
+      CT.splitPosition(IERC20(token), bytes32(0), condition,
+        getPositionAndDustPositions(_outcome), n_outcome_tokens);
+      }
     CT.safeTransferFrom(address(this), msg.sender,
       pos, n_outcome_tokens, '');
   }
@@ -154,13 +152,9 @@ contract LsLMSR is IERC1155Receiver, Ownable{
     uint p = 0;
     for (uint i=0; i<numOutcomes; i++) {
       dust[i] = 1<<i;
-      /* console.log('Index', 1<<i); */
-      p = CT.getPositionId(IERC20(token), CT.getCollectionId(
-        bytes32(0), condition, 1<<i)
-        );
-      /* console.log(CT.balanceOf(address(this), p)); */
     }
     CT.redeemPositions(IERC20(token), bytes32(0), condition, dust);
+    IERC20(token).safeTransfer(msg.sender, IERC20(token).balanceOf(address(this)));
   }
 
   function getOnes(uint n) internal pure returns (uint count) {
